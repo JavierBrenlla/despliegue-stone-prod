@@ -1,0 +1,59 @@
+version: '3'
+services:
+  django:
+    image: harbor.possibleinc.com/stone-color-tracer/backend-dev
+    depends_on:
+      - psql
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    env_file:
+      - django.env
+
+  frontend:
+    image: harbor.possibleinc.com/stone-color-tracer/frontend-dev
+    depends_on:
+      - django
+    expose:
+      - "80"
+    ports:
+      - "80:80"
+
+  flaskapi:
+    image: harbor.possibleinc.com/stone-color-tracer/image-processing-api
+    hostname: sct_iamge_processing_api
+    ports:
+      - 5000:5000
+    env_file:
+      - flask-api.env
+
+  psql:
+    image: postgres:14.1
+    env_file:
+      - psql.env
+    expose:
+      - 5432
+
+  minio:
+    image: minio/minio
+    volumes:
+      - minio_storage:/data
+    env_file:
+      - minio.env
+    command: server --console-address ":9001" /data
+    ports:
+      - 9000:9000
+      - 9001:9001
+    expose:
+      - 9000
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c " /usr/bin/mc config host add myminio http://minio:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY; /usr/bin/mc mb myminio/imagenes; exit 0; "
+
+volumes:
+  minio_storage: {}
